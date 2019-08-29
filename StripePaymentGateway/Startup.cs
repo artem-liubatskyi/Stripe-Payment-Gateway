@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Stripe;
@@ -17,9 +16,17 @@ namespace StripePaymentGateway
         }
         public void ConfigureServices(IServiceCollection services)
         {
-            var stripeSection = Configuration.GetSection("StripeSettings");
+            var stripeSection = Configuration.GetSection(nameof(StripeSettings));
             var stripeSettings = stripeSection.Get<StripeSettings>();
             StripeConfiguration.ApiKey = stripeSettings.SecretKey;
+
+            services.Configure<StripeSettings>(options =>
+            {
+                options.PublishableKey = stripeSettings.PublishableKey;
+                options.SecretKey = stripeSettings.SecretKey;
+            });
+
+            services.AddMvc();
         }
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
@@ -27,11 +34,11 @@ namespace StripePaymentGateway
             {
                 app.UseDeveloperExceptionPage();
             }
-
-            app.Run(async (context) =>
-            {
-                await context.Response.WriteAsync("Hello World!");
-            });
+            app.UseMvc(routes =>
+                routes.MapRoute(
+                    name: "default",
+                    template: "{controller=Payment}/{action=Index}")
+                );
         }
     }
 }
